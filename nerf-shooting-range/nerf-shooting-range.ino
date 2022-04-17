@@ -2,8 +2,10 @@
  * Fantasy Court - Nerf Target Practise
  * 
  * TODO: Maak een beschrijving van hoe het ongeveer werkt, en hoe je het configureert
+ * Controle snelheid via potmeter en settings via rotary switch
  * 
- * 
+ * KP: Updated motor enable pin & status LED from old run indicator code, changed pin types from bool to const int, added delay so gates close before enable turns off.
+ * Changed motor pin numbers, lost game.
  * Oude gekopieërde meuk:
  * 
   Input Pull-up Serial
@@ -34,16 +36,18 @@ const bool invertStartButton = true; // Whether the start button signal becomes 
 const bool invertPanicButton = true; // idem
 
 // Define targets
-const int target1Pin = 2;
-const int target2Pin = 3;
-const int target3Pin = 4;
-const int target4Pin = 5;
+const int target1Pin = 7;
+const int target2Pin = 6;
+const int target3Pin = 5;
+const int target4Pin = 4; //4 to 2 not connected yet.
+const int target5Pin = 3;
+const int target6Pin = 2;
 
 const int numTargets = 3;
 const int targets[] = {target1Pin, target2Pin, target3Pin};
 
 // Amount of times targets open up
-const int sequenceLength = 4;
+const int sequenceLength = 8;
 
 // Hardcoded sequence useful for testing
 bool sequence[sequenceLength][numTargets] = {
@@ -74,7 +78,8 @@ const int maxSequenceDuration = 3000;
 
 // Whether the sequence is currently playing
 bool isRunning = false;
-bool runIndicatorPin = 11; // Internal Light
+const int driverEnablePin = 11; // Motor driver enable pin
+const int statusLEDPin = 12; // Status LED, currently function same as Motor driver enable
 
 const bool allowConsecutiveActivity = false; // Whether a target can be active for two consecutive sequences
 const int minActiveTargetsPerSequence = 1; // Minimum number of active targets
@@ -117,7 +122,8 @@ void setup() {
   pinMode(panicButtonPin, INPUT_PULLUP);
 
   // Run indicator
-  pinMode(runIndicatorPin, OUTPUT);
+  pinMode(driverEnablePin, OUTPUT);
+  pinMode(statusLEDPin, OUTPUT);
 
   debugprint("Marking following pins as output: ");
   // Mark the pins of targets as output  
@@ -138,14 +144,16 @@ void setup() {
 void reset() {
   debugprintln("RESET - STOPPING EVERYTHING!!");
   isRunning = false;
-  digitalWrite(runIndicatorPin, LOW);  
+
   
   // Reset targets
   for (int i = 0; i < numTargets; i++) {
-    digitalWrite(targets[i], LOW);
+    digitalWrite(targets[i], LOW);  
     currentSequence[i] = false;
   }
-
+  delay(1000); //Needs some time to open(?) before drivers are disabled.
+  digitalWrite(driverEnablePin, LOW);  //Disable driver after opening(?) all targets.
+  digitalWrite(statusLEDPin, LOW); 
   // Reset sequence
   sequenceState = 0;
 }
@@ -168,7 +176,9 @@ void loop() {
     int pressVal = invertStartButton ? LOW : HIGH;
     if (startButtonVal == pressVal) {
       isRunning = true;
-      digitalWrite(runIndicatorPin, HIGH);
+      digitalWrite(driverEnablePin, HIGH);
+      digitalWrite(statusLEDPin, HIGH);
+      
       debugprintln("ACTIVATION COMPLETE");
     }
   } else {
