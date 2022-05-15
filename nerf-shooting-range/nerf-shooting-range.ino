@@ -44,7 +44,8 @@ const int target5Pin = 3;
 const int target6Pin = 2;
 
 const int numTargets = 3;
-const int targets[] = {target1Pin, target2Pin, target3Pin};
+const int maxNumSubtargets = 2;
+const int targets[numTargets][maxNumSubtargets] = {{target1Pin, target3Pin}, {target2Pin, -1}, {target6Pin, -1}};
 
 // Amount of times targets open up
 const int sequenceLength = 8;
@@ -82,8 +83,8 @@ const int driverEnablePin = 11; // Motor driver enable pin
 const int statusLEDPin = 12; // Status LED, currently function same as Motor driver enable
 
 const bool allowConsecutiveActivity = false; // Whether a target can be active for two consecutive sequences
-const int minActiveTargetsPerSequence = 1; // Minimum number of active targets
-const int maxActiveTargetsPerSequence = 4; // Maximum number of active targets
+const int minActiveTargetsPerSequence = 1; // Minimum number of active targets (NOT YET IMPLEMENTED)
+const int maxActiveTargetsPerSequence = 4; // Maximum number of active targets (NOT YET IMPLEMENTED)
 
 /*
  * Prints a string to the serial output, but only if
@@ -128,8 +129,14 @@ void setup() {
   debugprint("Marking following pins as output: ");
   // Mark the pins of targets as output  
   for (int i = 0; i < numTargets; i++) {
-    pinMode(targets[i], OUTPUT);
-    debugprint(String(targets[i]) + ", ");
+    debugprint("(");
+    for (int j = 0; j < maxNumSubtargets; j++){
+      if (targets[i][j] >= 0) { // target must be set
+        pinMode(targets[i][j], OUTPUT);
+        debugprint(String(targets[i][j]) + ", ");
+      }
+    }
+    debugprint("), ");
   }
   debugprintln("");
 
@@ -148,7 +155,7 @@ void reset() {
   
   // Reset targets
   for (int i = 0; i < numTargets; i++) {
-    digitalWrite(targets[i], LOW);  
+    setTarget(i, LOW);  
     currentSequence[i] = false;
   }
   delay(1000); //Needs some time to open(?) before drivers are disabled.
@@ -218,7 +225,15 @@ void duringRun() {
 
 void setTargets(bool targetStates[numTargets]) {
   for (int i = 0; i < numTargets; i++) {
-    digitalWrite(targets[i], targetStates[i] ? HIGH : LOW);
+    setTarget(i, targetStates[i] ? HIGH : LOW);
+  }
+}
+
+void setTarget(int targetIndex, int value) {
+  for (int i = 0; i < maxNumSubtargets; i++) {
+    if (targets[targetIndex][i] >= 0) { // target must be set
+      digitalWrite(targets[targetIndex][i], value);
+    }
   }
 }
 
