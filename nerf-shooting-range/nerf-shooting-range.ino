@@ -187,8 +187,8 @@ void reset() {
 
   // Reset targets
   for (int i = 0; i < numTargets; i++) {
-    setTarget(i, LOW);
-    currentSequence[i] = false;
+    setTarget(i, HIGH);
+    currentSequence[i] = true;
   }
   delay(1000); //Needs some time to open(?) before drivers are disabled.
   digitalWrite(driverEnablePin, LOW);  //Disable driver after opening(?) all targets.
@@ -252,12 +252,12 @@ void duringRun() {
     int extra_delay = (analogRead(speedModAnalog) / 1023.0) * 10000;
     currentSequenceStateDuration += extra_delay;
 
-    debugprintln("Advanced to stage " + String(sequenceState) + " (" + String(currentSequenceStateDuration / 1000.0) + " seconds)");
-
-    if (currentGameMode == GAMEMODE_BULLSHIT) {
-      // Almost no delay in bullshit mode
-      currentSequenceStateDuration = random(100, 600);
+    if (currentGameMode == GAMEMODE_BULLSHIT and random(0, 3) == 0) {
+      // Almost no delay in bullshit mode with a 1/3 chance (syke!)
+      currentSequenceStateDuration = 250;
     }
+
+    debugprintln("Advanced to stage " + String(sequenceState) + " (" + String(currentSequenceStateDuration / 1000.0) + " seconds)");
 
     lastDebounceTime = millis();
 
