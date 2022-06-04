@@ -1,13 +1,13 @@
 /*
  * Fantasy Court - Nerf Target Practise
- * 
+ *
  * TODO: Maak een beschrijving van hoe het ongeveer werkt, en hoe je het configureert
  * Controle snelheid via potmeter en settings via rotary switch
- * 
+ *
  * KP: Updated motor enable pin & status LED from old run indicator code, changed pin types from bool to const int, added delay so gates close before enable turns off.
  * Changed motor pin numbers, lost game.
  * Oude gekopieërde meuk:
- * 
+ *
   Input Pull-up Serial
 
   This example demonstrates the use of pinMode(INPUT_PULLUP). It reads a digital
@@ -35,11 +35,14 @@ const int panicButtonPin = 14; // Emergency Exit Button (inverted)
 const bool invertStartButton = true; // Whether the start button signal becomes LOW upon press
 const bool invertPanicButton = true; // idem
 
+// Analog inputs
+const int speedModAnalog = A7;
+
 // Define targets
 const int target1Pin = 7;
 const int target2Pin = 6;
 const int target3Pin = 5;
-const int target4Pin = 4; //4 to 2 not connected yet.
+const int target4Pin = 4;
 const int target5Pin = 3;
 const int target6Pin = 2;
 
@@ -47,7 +50,7 @@ const int numTargets = 3;
 const int maxNumSubtargets = 2;
 const int targets[numTargets][maxNumSubtargets] = {{target1Pin, target3Pin}, {target2Pin, -1}, {target6Pin, -1}};
 
-// Amount of times targets open up
+// Amount of times targets open up (not used in infinite mode)
 const int sequenceLength = 8;
 
 // Hardcoded sequence useful for testing
@@ -86,6 +89,18 @@ const bool allowConsecutiveActivity = false; // Whether a target can be active f
 const int minActiveTargetsPerSequence = 1; // Minimum number of active targets (NOT YET IMPLEMENTED)
 const int maxActiveTargetsPerSequence = 4; // Maximum number of active targets (NOT YET IMPLEMENTED)
 
+typedef enum {
+  GAMEMODE_STANDARD,
+  GAMEMODE_INFINITE,
+  GAMEMODE_BULLSHIT
+  // Room for one more mode
+} GameMode;
+GameMode currentGameMode = GAMEMODE_STANDARD;
+
+const int mode0Pin = 19;
+const int mode1Pin = 18;
+const int mode2Pin = 17;
+
 /*
  * Prints a string to the serial output, but only if
  * debug mode is enabled.
@@ -115,19 +130,24 @@ void setup() {
 
   // Use a random seed
   randomSeed(42);
-//  randomSeed(analogRead(0));
-  
+  //  randomSeed(analogRead(0));
+
   // Configure start button and emergency stop as an input, and enable
   //  the internal pull-up resistor as they're buttons
   pinMode(startButtonPin, INPUT_PULLUP);
   pinMode(panicButtonPin, INPUT_PULLUP);
+
+  // Gamemode Selector
+  pinMode(mode0Pin, INPUT_PULLUP);
+  pinMode(mode1Pin, INPUT_PULLUP);
+  pinMode(mode2Pin, INPUT_PULLUP);
 
   // Run indicator
   pinMode(driverEnablePin, OUTPUT);
   pinMode(statusLEDPin, OUTPUT);
 
   debugprint("Marking following pins as output: ");
-  // Mark the pins of targets as output  
+  // Mark the pins of targets as output
   for (int i = 0; i < numTargets; i++) {
     debugprint("(");
     for (int j = 0; j < maxNumSubtargets; j++){
@@ -152,15 +172,15 @@ void reset() {
   debugprintln("RESET - STOPPING EVERYTHING!!");
   isRunning = false;
 
-  
+
   // Reset targets
   for (int i = 0; i < numTargets; i++) {
-    setTarget(i, LOW);  
+    setTarget(i, LOW);
     currentSequence[i] = false;
   }
   delay(1000); //Needs some time to open(?) before drivers are disabled.
   digitalWrite(driverEnablePin, LOW);  //Disable driver after opening(?) all targets.
-  digitalWrite(statusLEDPin, LOW); 
+  digitalWrite(statusLEDPin, LOW);
   // Reset sequence
   sequenceState = 0;
 }
@@ -178,18 +198,21 @@ void loop() {
   }
 
   if (!isRunning) {
-    // If we're not running, then the start button can start the run
+    // If we're not running, then we can change the gamemode
+    UpdateGameMode();
+    
+    // We can also use the start button to start the run
     int startButtonVal = digitalRead(startButtonPin);
     int pressVal = invertStartButton ? LOW : HIGH;
     if (startButtonVal == pressVal) {
       isRunning = true;
       digitalWrite(driverEnablePin, HIGH);
       digitalWrite(statusLEDPin, HIGH);
-      
+
       debugprintln("ACTIVATION COMPLETE");
     }
   } else {
-    // We're running; execute main program 
+    // We're running; execute main program
     duringRun();
   }
 }
@@ -207,6 +230,10 @@ void duringRun() {
     }
 
     currentSequenceStateDuration = random(minSequenceDuration, maxSequenceDuration);
+
+    int extra_delay = (analogRead(speedModAnalog) / 1023.0) * 10000;
+    currentSequenceStateDuration += extra_delay;
+
     debugprintln("Advanced to stage " + String(sequenceState) + " (" + String(currentSequenceStateDuration / 1000.0) + " seconds)");
 
     lastDebounceTime = millis();
@@ -247,10 +274,35 @@ void SetRandomSequence() {
     if (allowConsecutiveActivity or not currentSequence[i]) {
       randomSequence[i] = random(0, 2) == 1;
     }
-  
-    currentSequence[i] = randomSequence[i];  
+
+    currentSequence[i] = randomSequence[i];
     debugprint(String(randomSequence[i]) + ", ");
   }
   setTargets(randomSequence);
   debugprintln("}");
+}
+
+GameMode UpdateGameMode() {
+  if (digitalRead(mode0Pin) == LOW) {
+    if (currentGameMode != GAMEMODE_STANDARD) {
+      debugprintln("Gamemode: STANDARD");
+    }
+    currentGameMode = GAMEMODE_STANDARD;
+  } else if (digitalRead(mode1Pin) == LOW) {
+    if (currentGameMode != GAMEMODE_INFINITE) {
+      debugprintln("Gamemode: INFINITE");
+    }
+    currentGameMode = GAMEMODE_INFINITE;
+  } else if (digitalRead(mode2Pin) == LOW) {
+    if (currentGameMode != GAMEMODE_BULLSHIT) {
+      debugprintln("Gamemode: BULLSHIT");
+    }
+    currentGameMode = GAMEMODE_BULLSHIT;
+  } else {
+    // Fallback; can be a different mode 
+    if (currentGameMode != GAMEMODE_STANDARD) {
+      debugprintln("Gamemode: FALLBACK");
+    } 
+    currentGameMode = GAMEMODE_STANDARD;
+  }
 }
