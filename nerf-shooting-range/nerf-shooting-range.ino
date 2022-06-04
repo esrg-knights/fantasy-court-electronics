@@ -39,38 +39,38 @@ const bool invertPanicButton = true; // idem
 const int speedModAnalog = A7;
 
 // Define targets
-const int target1Pin = 7;
-const int target2Pin = 6;
-const int target3Pin = 5;
-const int target4Pin = 4;
-const int target5Pin = 3;
-const int target6Pin = 2;
+const int target1Pin = 2;
+const int target2Pin = 7;
+const int target3Pin = 4;
+const int target4Pin = 6;
+const int target5Pin = 5;
+const int target6Pin = 3;
 
-const int numTargets = 3;
+const int numTargets = 4;
 const int maxNumSubtargets = 2;
-const int targets[numTargets][maxNumSubtargets] = {{target1Pin, target3Pin}, {target2Pin, -1}, {target6Pin, -1}};
+const int targets[numTargets][maxNumSubtargets] = {{target1Pin, target2Pin}, {target3Pin, target4Pin}, {target5Pin, -1}, {target6Pin, -1}};
 
 // Amount of times targets open up (not used in infinite mode)
 const int sequenceLength = 16;
 
 // Hardcoded sequence useful for testing
 bool sequence[sequenceLength][numTargets] = {
-  { false, false, false },
-  { true, false, false },
-  { false, true, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
-  { false, false, true },
+  { false, false, false, false },
+  { true, false, false, false },
+  { false, true, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
+  { false, false, true, false },
 };
 
 // Current states
@@ -223,6 +223,7 @@ void loop() {
       // Close all targets before starting      
       reset(false);
 
+      delay(4000); // Wait a little so the players can be ready
       // Re-enable power
       isRunning = true;
       digitalWrite(driverEnablePin, HIGH);
