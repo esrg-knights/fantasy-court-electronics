@@ -175,20 +175,23 @@ void setup() {
   // Get current time
   lastDebounceTime = millis();
 
-  reset();
+  reset(true);
 }
 
 
 // Reset all components
-void reset() {
+void reset(bool open_targets) {
   debugprintln("RESET - STOPPING EVERYTHING!!");
   isRunning = false;
 
+  // Supply power so the targets can still close
+  digitalWrite(driverEnablePin, HIGH);
+  digitalWrite(statusLEDPin, HIGH);
 
   // Reset targets
   for (int i = 0; i < numTargets; i++) {
-    setTarget(i, HIGH);
-    currentSequence[i] = true;
+    setTarget(i, open_targets ? HIGH : LOW);
+    currentSequence[i] = open_targets;
   }
   delay(1000); //Needs some time to open(?) before drivers are disabled.
   digitalWrite(driverEnablePin, LOW);  //Disable driver after opening(?) all targets.
@@ -206,7 +209,7 @@ void loop() {
   int pressVal = invertPanicButton ? LOW : HIGH;
   if (panicButtonVal == pressVal) {
     isRunning = false;
-    reset();
+    reset(true);
   }
 
   if (!isRunning) {
@@ -217,6 +220,10 @@ void loop() {
     int startButtonVal = digitalRead(startButtonPin);
     int pressVal = invertStartButton ? LOW : HIGH;
     if (startButtonVal == pressVal) {
+      // Close all targets before starting      
+      reset(false);
+
+      // Re-enable power
       isRunning = true;
       digitalWrite(driverEnablePin, HIGH);
       digitalWrite(statusLEDPin, HIGH);
@@ -242,7 +249,7 @@ void duringRun() {
         sequenceState = 0;
       } else {
         // There is no next stage; Reset; run complete
-        reset();
+        reset(false);
         return;
       }
     }
