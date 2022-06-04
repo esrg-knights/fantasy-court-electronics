@@ -51,13 +51,25 @@ const int maxNumSubtargets = 2;
 const int targets[numTargets][maxNumSubtargets] = {{target1Pin, target3Pin}, {target2Pin, -1}, {target6Pin, -1}};
 
 // Amount of times targets open up (not used in infinite mode)
-const int sequenceLength = 8;
+const int sequenceLength = 16;
 
 // Hardcoded sequence useful for testing
 bool sequence[sequenceLength][numTargets] = {
   { false, false, false },
   { true, false, false },
   { false, true, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
+  { false, false, true },
   { false, false, true },
 };
 
@@ -90,12 +102,12 @@ const int minActiveTargetsPerSequence = 1; // Minimum number of active targets (
 const int maxActiveTargetsPerSequence = 4; // Maximum number of active targets (NOT YET IMPLEMENTED)
 
 typedef enum {
-  GAMEMODE_STANDARD,
+  GAMEMODE_SHORT,
+  GAMEMODE_LONG,
   GAMEMODE_INFINITE,
   GAMEMODE_BULLSHIT
-  // Room for one more mode
 } GameMode;
-GameMode currentGameMode = GAMEMODE_STANDARD;
+GameMode currentGameMode = GAMEMODE_SHORT;
 
 const int mode0Pin = 19;
 const int mode1Pin = 18;
@@ -223,10 +235,16 @@ void loop() {
 void duringRun() {
   if ((millis() - lastDebounceTime) > currentSequenceStateDuration) {
     // time has passed, get to the next stage
-    if (sequenceState >= sequenceLength) {
-      // There is no next stage; Reset; run complete
-      reset();
-      return;
+    int endOfSequence = currentGameMode == GAMEMODE_SHORT ? sequenceLength / 2 : sequenceLength;
+    if (sequenceState >= endOfSequence) {
+      if (currentGameMode == GAMEMODE_INFINITE or currentGameMode == GAMEMODE_BULLSHIT) {
+        // Continue infinitely; restart from beginning
+        sequenceState = 0;
+      } else {
+        // There is no next stage; Reset; run complete
+        reset();
+        return;
+      }
     }
 
     currentSequenceStateDuration = random(minSequenceDuration, maxSequenceDuration);
@@ -235,6 +253,11 @@ void duringRun() {
     currentSequenceStateDuration += extra_delay;
 
     debugprintln("Advanced to stage " + String(sequenceState) + " (" + String(currentSequenceStateDuration / 1000.0) + " seconds)");
+
+    if (currentGameMode == GAMEMODE_BULLSHIT) {
+      // Almost no delay in bullshit mode
+      currentSequenceStateDuration = random(100, 600);
+    }
 
     lastDebounceTime = millis();
 
@@ -246,6 +269,7 @@ void duringRun() {
       // Generate a random sequence instead
       SetRandomSequence();
     }
+    
     sequenceState += 1;
   }
 }
@@ -284,25 +308,25 @@ void SetRandomSequence() {
 
 GameMode UpdateGameMode() {
   if (digitalRead(mode0Pin) == LOW) {
-    if (currentGameMode != GAMEMODE_STANDARD) {
-      debugprintln("Gamemode: STANDARD");
+    if (currentGameMode != GAMEMODE_SHORT) {
+      debugprintln("Gamemode: SHORT");
     }
-    currentGameMode = GAMEMODE_STANDARD;
+    currentGameMode = GAMEMODE_SHORT;
   } else if (digitalRead(mode1Pin) == LOW) {
+    if (currentGameMode != GAMEMODE_LONG) {
+      debugprintln("Gamemode: LONG");
+    }
+    currentGameMode = GAMEMODE_LONG;
+  } else if (digitalRead(mode2Pin) == LOW) {
     if (currentGameMode != GAMEMODE_INFINITE) {
       debugprintln("Gamemode: INFINITE");
     }
     currentGameMode = GAMEMODE_INFINITE;
-  } else if (digitalRead(mode2Pin) == LOW) {
-    if (currentGameMode != GAMEMODE_BULLSHIT) {
-      debugprintln("Gamemode: BULLSHIT");
-    }
-    currentGameMode = GAMEMODE_BULLSHIT;
   } else {
     // Fallback; can be a different mode 
-    if (currentGameMode != GAMEMODE_STANDARD) {
-      debugprintln("Gamemode: FALLBACK");
+    if (currentGameMode != GAMEMODE_BULLSHIT) {
+      debugprintln("Gamemode: BULLSHIT");
     } 
-    currentGameMode = GAMEMODE_STANDARD;
+    currentGameMode = GAMEMODE_BULLSHIT;
   }
 }
