@@ -8,6 +8,25 @@
  * Changed motor pin numbers, lost game.
  * Oude gekopieërde meuk:
  *
+  Input Pull-up Serial
+
+  This example demonstrates the use of pinMode(INPUT_PULLUP). It reads a digital
+  input on pin 2 and prints the results to the Serial Monitor.
+
+  The circuit:
+  - momentary switch attached from pin 2 to ground
+  - built-in LED on pin 13
+
+  Unlike pinMode(INPUT), there is no pull-down resistor necessary. An internal
+  20K-ohm resistor is pulled to 5V. This configuration causes the input to read
+  HIGH when the switch is open, and LOW when it is closed.
+
+  created 14 Mar 2012
+  by Scott Fitzgerald
+
+  This example code is in the public domain.
+
+  https://www.arduino.cc/en/Tutorial/BuiltInExamples/InputPullupSerial
 */
 
 const int startButtonPin = 15; // Start button (inverted)
@@ -36,7 +55,7 @@ const int sequenceLength = 32;
 
 // Hardcoded sequence useful for testing
 bool sequence[sequenceLength][numTargets] = {
-  { false, false, false, false },
+ { false, false, false, false },
   { true, false, false, false },
   { false, true, true, false },
   { true, false, false, false },
@@ -85,8 +104,8 @@ const bool useRandomizedSequence = true;
 const bool debugModeEnabled = true;
 
 // Duration of a single sequence state
-const int minSequenceDuration = 1000;
-const int maxSequenceDuration = 3000;
+const int minSequenceDuration = 500; //was 1000
+const int maxSequenceDuration = 501; //was 3000 it seems to be more fun if you have the same time, because you get a bit more skill in predicting how long you have vs random.
 //const int sequenceDuration = 1000; // Duration of a single sequence state
 
 // Whether the sequence is currently playing
@@ -252,14 +271,16 @@ void duringRun() {
       }
     }
 
-    currentSequenceStateDuration = random(minSequenceDuration, maxSequenceDuration);
 
-    int extra_delay = (analogRead(speedModAnalog) / 1023.0) * 10000;
-    currentSequenceStateDuration += extra_delay;
 
     if (currentGameMode == GAMEMODE_BULLSHIT and random(0, 3) == 0) {
       // Almost no delay in bullshit mode with a 1/3 chance (syke!)
       currentSequenceStateDuration = 250;
+    }
+    else{
+    currentSequenceStateDuration = random(minSequenceDuration, maxSequenceDuration);
+    int extra_delay = (analogRead(speedModAnalog) / 1023.0) * 4500; //was 10k
+    currentSequenceStateDuration += extra_delay;      
     }
 
     debugprintln("Advanced to stage " + String(sequenceState) + " (" + String(currentSequenceStateDuration / 1000.0) + " seconds)");
@@ -289,6 +310,7 @@ void setTarget(int targetIndex, int value) {
   for (int i = 0; i < maxNumSubtargets; i++) {
     if (targets[targetIndex][i] >= 0) { // target must be set
       digitalWrite(targets[targetIndex][i], value);
+      delay(50);  //Added to avoid peak current if many gates try to go at once.
     }
   }
 }
